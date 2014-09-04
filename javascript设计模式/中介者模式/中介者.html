@@ -1,0 +1,331 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<script type="text/javascript">
+
+		//中介者模式的简单实现
+    var mediator = (function () {
+
+    	//存储可被广播或监听的topic
+    	var topics = {};
+
+    	//订阅一个topic，提供一个回调函数，一旦topic被广播就执行回调。
+    	var subscribe = function (topic,fn) {
+    		//debugger;
+    		if (!topics[topic]) {
+    			topics[topic] = []; 
+    		}
+    		topics[topic].push({ context: this, callback: fn});
+    		return this;
+    	};
+
+    	//发布/广播事件到程序的剩余部分
+    	var publish = function (topic) {
+    		//debugger;
+
+    		var args;
+
+    		if (!topics[topic]) {
+    			return false;
+    		}
+
+    		args = Array.prototype.slice.call(arguments, 1);
+    		for (var i = 0, l = topics[topic].length; i < l; i++) {
+
+    			var subscription = topics[topic][i];
+    			subscription.callback.apply(subscription.context, args);
+    		}
+    		return this;
+    	};
+
+    	return {
+    		Publish : publish,
+    		Subscriber : subscribe,
+    		installTo : function (obj) {
+    			obj.subscribe = subscribe;
+    			obj.publish = publish;
+    		}
+    	};
+
+    })();
+
+
+
+    //终结者模式的高级实现
+
+    //首先，我们实现订阅者的概念。
+    //将context上下文传递给订阅者，默认上下文是windows对象
+    (function (root) {
+
+    	function guidGenerator () {/*   */};
+
+    	//订阅者构造函数
+    	function Subscriber(fn, options, context) {
+    		if (!this instanceof Subscriber) {
+    			return new Subscriber(fn, context, options);
+    		} else {
+
+    			//guidGenetator()
+    			//是一个函数，用于为订阅者生成GUID，一遍之后很方便的使用它们
+    			//为了简介，跳过具体实现
+
+    			this.id = guidGenerator();
+    			this.fn = fn;
+    			this.options = options;
+    			this.context = context;
+    			this.topic = null;
+
+    		}
+    	};
+
+	    //模拟topic
+	    //Javascript允许我们使用Function对象作为原型的结合与新对象和构造函数一起使用
+	    function Topic (namespace) {
+
+	    	if (!this instanceof Topic) {
+	    		return new Topic(namespace);
+	    	} else {
+
+	    		this.namespace = namespace || '';
+	    		this._callbacks = [];
+	    		this._topics = [];
+	    		this.stopped = false;
+
+	    	}
+	    };
+
+	    //定义topic的prototype原型，包括添加订阅和获取订阅者的方式
+	    Topic.prototype = {
+
+	    	//添加新订阅者
+	    	AddSubscriber : function () {
+
+	    		var callback = new Subscriber(fn, options, context);
+
+	    		this._callbacks.push(callback);
+
+	    		callback.topic = this;
+
+	    		return callback;
+	    	},
+
+	    	//StopPropagation() 方法调用进一步的回调传播
+	    	StopPropagation : function () {
+	    		this.stopped = true;
+	    	},
+
+	    	//当给定GUID表示时，我们也可以很容易的获取现有的订阅者
+	    	GetSubscriber : function (identifier) {
+
+	    		for (var x = 0, y = this._callbacks.length; x < y; x++) {
+	    			if (this._callbacks[x].id == identifier || this._callbacks[x].fn == identifier) {
+	    				return thid._callbacks[x];
+	    			}
+	    		}
+
+	    		for (var z in this._topics) {
+	    			if (this._topics.hasOwnProperty(z)) {
+	    				var sub = this._topics[z].GetSubscriber(identifier);
+	    				if (sub !== undefined) {
+	    					return sub;
+	    				}
+	    			}
+	    		}
+	    	},
+
+	    	//添加topic
+	    	AddTopic : function (topic) {
+	    		this._topics[topic] = new Topic((this.namespace ? this.namespace + ':' : ''), topic);
+	    	},
+
+	    	//检查现有topic或者获取topic
+	    	HasTopic : function (topic) {
+	    		return this._topics.hasOwnProperty(topic);
+	    	},
+
+	    	returnTopic : function (topic) {
+	    		return this._topics[topic];
+	    	},
+
+	    	//通过主题递归删除一个订阅者
+	    	RemoveSubsriber : function (identifier) {
+
+	    		if (!identifier) {
+	    			this._callbacks = [];
+
+	    			for (var z in this._topics) {
+	    				if(this._topics.hasOwnProperty(z)) {
+	    					this.topics[z].RemoveSubsriber(identifier);
+	    				}
+	    			}
+	    		}
+
+	    		for (var y = 0, x = this.callback.length; y < x; y++) {
+	    			if (this._callbacks[y].fn== identifier || this._callbacks[y].id == identifier) {
+	    				this._callbacks[y].topic = null;
+	    				this._callbacks.splice(y, 1);
+	    				x--;
+	    				y--;
+	    			}
+	    		}
+
+	    	},
+
+	    	//通过topic递归向订阅者发布任意参数
+	    	Publish :  function (data) {
+
+	    		for (var y = 0, x = this._callbacks.length; y < x; y++) {
+
+	    			var callback = this._callbacks[y], l;
+	    			callback.fn.apply(callback.context, data);
+	    			l = this._callbacks.length;
+
+	    			if (l < x) {
+	    				y--;
+	    				x = l;
+	    			}
+	    		}
+
+	    		for (var x in this._topics) {
+	    			if (!this.stopped) {
+	    				if (this._topics.hasOwnProperty(x)) {
+	    					this.topics[x].Publish(data);
+	    				}
+	    			}
+	    		}
+
+	    		this.stopped = false;
+	    	}
+	    };
+
+	    function Mediator() {
+
+	    	if (!this instanceof Mediator) {
+	    		return new Mediator();
+	    	} else {
+	    		this._topics = new Topic('');
+	    	}
+	    };
+
+	    Mediator.prototype = {
+	    	GetTopic : function (namespace) {
+	    		var topic = this._topics,
+	    		    namespaceHierarch = namespace.split(':');
+
+	    		if (namespace === '') {
+	    			return topic;
+	    		}
+
+	    		if (namespaceHierarch.length > 0) {
+	    			for (var i = 0, j = namespaceHierarch.length; i < j; i++) {
+	    				
+	    				if (!topic.HasTopic(namespaceHierarch[i])) {
+	    					topic.AddTopic(namespaceHierarch[i]);
+	    				}
+
+	    				topic = topic.returnTopic(namespaceHierarch[i]);
+	    			}
+	    		}
+
+	    		return topic;
+	    	},
+
+	    	//通过给定的订阅者ID/命名函数和topic命名空间返回一个订阅者
+	    	GetSubscriber : function (identifier, topic) {
+	    		return this.GetTopic(topic || '').GetSubscriber(identifier);
+	    	},
+
+	    	//通过给定的订阅者ID或命名函数，从给定的topic命名空间递归删除订阅者
+	    	Remove : function (topicName, identifier) {
+	    		this.GetTopic(topicName).RemoveSubsriber(identifier); 
+	    	},
+
+	    	/*Mediator.Publish('inbox:messages:new', [args]);*/
+		    Publish : function (topicName) {
+		    	var args = Array.prototype.slice.call(arguments, 1),
+		    	    topic = this.GetTopic(topicName);
+
+		    	args.push(topic);
+		    	this.GetTopic(topicName).Publish(args);
+		    }
+
+	    };
+
+	    root.Mediator = Mediator;
+	    Mediator.Topic = Topic;
+	    Mediator.Subscriber = Subscriber;
+
+
+    })(window);
+
+	</script>
+	<script type="text/javascript" src="../jquery-1.7.2.js"></script>
+</head>
+<body>
+	<h1>Chat</h1>
+	<form action="" id="chatForm">
+		<label for="fromBox">You Name:</label>
+		<input type="text" id="fromBox">
+		<br>
+		<label for="toBox">Send To:</label>
+		<input type="text" id="toBox">
+		<br>
+		<label for="chatBox">Message:</label>
+		<input type="text" id="chatBox">
+		<button action="submit">Chat</button>
+	</form>
+
+	<div id="chatResult"></div>
+
+</body>
+<script type="text/javascript">
+
+	$("#chatForm").on("submit", function (e) {
+		e.preventDefault();
+
+		//从UI上获取chat数据
+		var text = $('#chatBox').val(),
+		    from = $('#fromBox').val(),
+		    to = $('#toBox').val();
+
+		//将数据发送到newMessage主题上
+		mediator.Publish('newMessage', {message : text, from : from, to : to});
+	});
+
+
+
+	//基本实现上的js代码
+	
+
+	//将新信息附加到聊天结果记录上
+	function displayChat (data) {
+		var date = new Date(),
+		    msg = data.from + "said\"" +data.message + "\" to " + data.to;
+		$("#chatResult").prepend("" + msg + "(" + date.toLocaleTimeString() + ")");
+	}
+
+	//记录消息日志
+	function logChat(data) {
+		if (window.console) {
+			console.log(data);
+		}
+	}
+
+	//通过mediator订阅新提交的newMessage主题
+	//mediator.Subscriber("newMessage", displayChat);
+	//mediator.Subscriber("newMessage", logChat);
+
+	//如下代码仅在高级代码实现上可用
+	function amITalkingToMyself(data) {
+		return data.from === data.to;
+	}
+
+	function iAmClearlyCrazy(data) {
+		$("#chatResult").prepend("" + data.from + "is talking to himself.");
+	}
+
+	mediator.Subscriber(amITalkingToMyself, iAmClearlyCrazy);
+</script>
+</html>

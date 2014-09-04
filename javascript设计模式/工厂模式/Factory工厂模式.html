@@ -1,0 +1,146 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<script type="text/javascript">
+
+
+	//插入js继承测试
+	function object(o) {
+		function F() {};
+		F.prototype = o;
+		return new F();
+	}
+
+	function inheritPrototype(subType, superType) {
+		var prototype = object(superType.prototype);
+		prototype.constructor = subType;
+		 SubType.prototype = prototype; 
+	}
+
+	function SuperType(name) {
+		this.name = name;
+		this.color = ['red', 'blue', 'green'];
+	}
+
+	SuperType.prototype.sayName = function() {
+		console.log(this.name);
+	};
+
+	function SubType(name, age) {
+		SuperType.call(this, name);
+		this.age = age;
+	}
+
+	inheritPrototype(SubType, SuperType);
+
+	SubType.prototype.sayName = function() {
+		console.log(this.age);
+	}
+	
+
+	var subs = new SubType('yyy', 20);
+	var supers = new SuperType('www');
+
+
+
+
+
+		//定义Car构造函数
+		function Car(options) {
+
+			//默认值
+			this.doors = options.doors || 4;
+			this.state = options.state || 'brand new';
+			this.color = options.color || 'silver';
+		}
+
+		//定义Truck构造函数
+		function Truck(options) {
+
+			//Truck默认值
+			this.state = options.state || 'used';
+			this.wheelSize = options.wheelSize || 'large';
+			this.color = options.color || 'blue';
+		}
+
+		//定义vehicke工厂的大体代码
+		function VehicleFactory() {};
+
+		//定义工厂的原型和试用工具，默认VehicleClass是Car
+		VehicleFactory.prototype.VehicleClass = Car;
+
+		//创建Vehicle实例的工厂方法
+		VehicleFactory.prototype.createVehicle = function (options) {
+			if (options.vehicleType != null) {
+				if (options.vehicleType === 'car') {
+					this.VehicleClass = Car;
+				} else if (options.vehicleType === 'truck') {
+					this.VehicleClass = Truck;
+				}
+			}
+			return new this.VehicleClass(options);
+		}
+
+		//创建生成汽车的工厂单例
+		var Factory = new VehicleFactory();
+		var car1 = Factory.createVehicle({
+			vehicleType : 'car',
+			color : 'yellow',
+			doors : 6
+		});
+
+		//测试汽车是由vehicleClass里的原型prototype里的Car创建的
+		console.log(car1 instanceof Car);
+
+		var truck1 = Factory.createVehicle({
+			vehicleType : 'truck',
+			state : 'like new',
+			color : 'red',
+			wheelSize : 'small',
+		});
+		console.log(truck1 instanceof Truck);
+
+		function TruckFactory() {};
+		/*var prototype = new VehicleFactory();
+		prototype.constructor = TruckFactory;
+		TruckFactory.prototype = prototype;*/
+		TruckFactory.prototype = new VehicleFactory();
+		TruckFactory.prototype.constructor = TruckFactory;
+		TruckFactory.prototype.VehicleClass = Truck;
+
+		var truckfactory = new TruckFactory();
+		var track2 = truckfactory.createVehicle({
+			state : 'omg..so bad',
+			color : 'pink',
+			wheelSize : 'so big'
+		});
+		console.log(track2 instanceof Truck);
+
+		var car2 = Factory.createVehicle({
+			color : 'yellow',
+			doors : 6
+		});
+		console.log(car2 instanceof Car);
+
+
+	</script>
+</head>
+<body>
+	<input id="text" type="text">
+</body>
+<script type="text/javascript">
+	var text = document.getElementById('text');
+	text.onblur = function() {
+		if (this.value.length > 5) {
+   		var b = document.createElement('b');
+   		b.style.fontSize = '12px';
+   		b.style.color = 'red';
+   		var content = document.createTextNode('超长');
+   		b.appendChild(content);
+   		document.body.appendChild(b);
+		}
+	}
+</script>
+</html>
